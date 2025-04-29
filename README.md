@@ -1,89 +1,94 @@
 # Block Timestamp Logger
 
-A lightweight Rust utility for monitoring block timestamp accuracy across different EVM chains (currently Base and Optimism). This tool helps understand timestamp reliability for time-based batching systems like sigma-batch.
+A lightweight Rust utility for monitoring block timestamp accuracy across different EVM chains. This tool helps understand timestamp reliability for time-based batching systems like sigma-batch.
 
 ## Features
 
-- Monitors Optimism and Base chains simultaneously
+- Monitors Optimism, Base, and Unichain chains
 - Records block timestamps vs. actual block receipt times
 - Calculates key statistics:
   - Past vs. future timestamp frequency
   - Maximum deviations in both directions
   - Average time deltas
 - Generates CSV reports for analysis
-- Simple direct JSON-RPC implementation with minimal dependencies
+- Simple configuration via environment variables
 
 ## Quick Start
 
 ### Prerequisites
 
 - Rust toolchain installed
-- RPC URLs for Base and Optimism
+- RPC URLs for the chains you want to monitor
 
-### Running the Logger
+### Setup and Run
 
 1. Clone this repository
-2. Build the project:
+2. Create a `.env` file:
+
+```
+# Required RPC endpoints
+OP_RPC_URL=https://mainnet.optimism.io
+BASE_RPC_URL=https://mainnet.base.org
+
+# Optional RPC endpoints
+UNI_RPC_URL=https://rpc.unichain.network
+
+# Optional configuration
+OUTPUT_DIR=./logs
+DURATION_MINUTES=60
+POLL_INTERVAL_MS=500
+RUST_LOG=info
+```
+
+3. Build and run:
 
 ```bash
 cargo build --release
-```
-
-3. Set up your RPC URLs:
-
-Option A - Use the provided shell script:
-```bash
-# Copy the example environment file
-cp .env.example .env
-
-# Edit the .env file with your RPC URLs
-nano .env  # or use any editor
-
-# Make the run script executable
-chmod +x run-logger.sh
-
-# Run the logger
-./run-logger.sh
-```
-
-Option B - Set environment variables:
-```bash
-# Set environment variables for your RPC endpoints
-export OP_RPC_URL=https://your-optimism-rpc-url
-export BASE_RPC_URL=https://your-base-rpc-url
-
-# Run with detailed logging
 RUST_LOG=info ./target/release/block-timestamp-logger
 ```
 
-Option C - Provide URLs directly:
+## Configuration Options
+
+All configuration is done through environment variables:
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `OP_RPC_URL` | RPC URL for Optimism | (Required) |
+| `BASE_RPC_URL` | RPC URL for Base | (Required) |
+| `UNI_RPC_URL` | RPC URL for Unichain | (Optional) |
+| `OUTPUT_DIR` | Directory for log files | `./logs` |
+| `DURATION_MINUTES` | How long to run the logger (0 for indefinite) | `60` |
+| `POLL_INTERVAL_MS` | Polling interval in milliseconds | `500` |
+| `RUST_LOG` | Logging level (`error`, `warn`, `info`, `debug`, `trace`) | `info` |
+
+## Analyzing Results
+
+The logger generates CSV files in the output directory:
+
+1. `{Chain}_stats.csv`: Summary statistics about timestamp accuracy
+2. `{Chain}_deltas.csv`: Raw time delta values for further analysis
+
+Use the provided Python script to analyze these results:
+
 ```bash
-RUST_LOG=info ./target/release/block-timestamp-logger \
-  --op-rpc-url=https://your-optimism-rpc-url \
-  --base-rpc-url=https://your-base-rpc-url
+python3 analyze_timestamps.py --logs-dir ./logs --output-dir ./analysis
 ```
 
-## Command Line Options
+This will generate visualizations and provide detailed analysis of the timestamp data.
 
-```
-Options:
-  --op-rpc-url <OP_RPC_URL>                RPC URL for Optimism [env: OP_RPC_URL=]
-  --base-rpc-url <BASE_RPC_URL>            RPC URL for Base [env: BASE_RPC_URL=]
-  --output-dir <OUTPUT_DIR>                Output directory for logs and reports [default: ./logs]
-  --duration-minutes <DURATION_MINUTES>    Duration to run logger in minutes (0 for indefinite) [default: 60]
-  --poll-interval-ms <POLL_INTERVAL_MS>    Polling interval in milliseconds [default: 500]
-  -h, --help                               Print help
-  -V, --version                            Print version
-```
+## Understanding the Results
 
-## Output
+The most important metrics to focus on:
 
-The logger generates CSV files in the output directory with:
+1. **Past vs. Future Timestamps**:
+   - Past timestamps (positive delta) indicate honest timestamps
+   - Future timestamps (negative delta) indicate potentially dishonest timestamps
+   - Chains with higher percentages of past timestamps are more reliable for time-based batching
 
-1. Summary statistics for each chain
-2. Raw time deltas for deeper analysis
+2. **Timestamp Variability**:
+   - Standard deviation and percentile analysis show how consistent timestamps are
+   - Chains with narrower distributions make better candidates for time-based batching
 
-## Next Steps
-
-- Add support for more chains
-- Create a Nix flake for better dependency management
+3. **Required Batch Window**:
+   - The analysis provides recommendations for minimum batch window sizes
+   - This helps ensure reliable operation of a sigma-batch implementation
