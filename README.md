@@ -43,8 +43,21 @@ RUST_LOG=info
 3. Build and run:
 
 ```bash
+# First, build the project
 cargo build --release
-RUST_LOG=info ./target/release/block-timestamp-logger
+
+# Run the logger (it will automatically load the .env file)
+./target/release/block-timestamp-logger
+```
+
+The logger will automatically load the `.env` file from the current directory. Alternatively, you can set the environment variables manually:
+
+```bash
+export OP_RPC_URL=https://mainnet.optimism.io
+export BASE_RPC_URL=https://mainnet.base.org
+export UNI_RPC_URL=https://rpc.unichain.network
+export RUST_LOG=info
+./target/release/block-timestamp-logger
 ```
 
 ## Configuration Options
@@ -71,7 +84,11 @@ The logger generates CSV files in the output directory:
 Use the provided Python script to analyze these results:
 
 ```bash
-python3 analyze_timestamps.py --logs-dir ./logs --output-dir ./analysis
+# Simply run the script (uses ./logs and ./analysis by default)
+python3 analyze_timestamps.py
+
+# Optionally specify specific chains to analyze
+python3 analyze_timestamps.py --chains Optimism Base
 ```
 
 This will generate visualizations and provide detailed analysis of the timestamp data.
